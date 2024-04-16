@@ -1,0 +1,147 @@
+---
+name: "Terragrunt CI/CD to AWS"
+
+env:
+  TF_DIR: "infrastructure"
+  TF_VERSION: "1.8.0"
+  TG_VERSION: '0.57.1'
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
+
+# There is a push event on the dev branch, or
+# There is a pull_request event on the dev branch, or
+# There is a manual trigger event (workflow_dispatch) on the dev branch
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+    branches:
+      - feature
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@main
+
+      - name: Check terragrunt HCL
+        uses: gruntwork-io/terragrunt-action@v2
+        with:
+          tf_version: ${{ env.TF_VERSION }}
+          tg_version: ${{ env.TG_VERSION }}
+          tg_dir: ${{ env.TF_DIR }}
+          tg_command: 'hclfmt --terragrunt-check --terragrunt-diff'
+
+  aws_auth:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Configure AWS master credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        id: master_iodc_creds
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.MASTER_IODC_ROLE_ARN }}
+          output-credentials: true
+
+      - name: Configure AWS development credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        id: development_iodc_creds
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ steps.master_iodc_creds.outputs.aws-access-key-id }}
+          aws-secret-access-key: ${{ steps.master_iodc_creds.outputs.aws-secret-access-key }}
+          aws-session-token: ${{ steps.master_iodc_creds.outputs.aws-session-token }}
+          role-to-assume: ${{ secrets.TERRAFORM_DEVELOP_ROLE_ARN }}
+          output-credentials: true
+
+    outputs:
+      AWS_ACCESS_KEY_ID: ${{ steps.development_iodc_creds.outputs.aws-access-key-id }}
+      AWS_SECRET_ACCESS_KEY: ${{ steps.development_iodc_creds.outputs.aws-secret-access-key }}
+      AWS_SESSION_TOKEN: ${{ steps.development_iodc_creds.outputs.aws-session-token }}
+
+  init:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    needs: [
+      checks,
+      aws_auth
+    ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Terraform Plugin Cache Dir
+        run: mkdir -p $TF_PLUGIN_CACHE_DIR
+
+      - name: Terraform Plugin Cache
+        uses: actions/cache@v4.0.1
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: ${{ runner.os }}-terraform-plugin-cache-${{ hashFiles('**/.terraform.lock.hcl') }}
+
+      - name: Add private ssh key
+        id: ssh_key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PRIVATE_SSH_KEY }}
+
+      # - name: Terragrunt Init
+      #   uses: gruntwork-io/terragrunt-action@v2
+      #   env:
+      #     TF_PLUGIN_CACHE_DIR: /github/workspace/.terraform.d/plugin-cache
+      #     INPUT_PRE_EXEC_1: |
+      #       export TF_VAR_dev_account_id=${{ secrets.AWS_DEVELOPMENT_ACCOUNT_ID }}
+      #       mkdir -p /home/runner/.ssh && touch /home/runner/.ssh/known_hosts
+      #       ssh-keygen -f "/home/runner/.ssh/known_hosts" -R "bitbucket.org"
+      #   with:
+      #     tf_version: ${{ env.TF_VERSION }}
+      #     tg_version: ${{ env.TG_VERSION }}
+      #     tg_dir: "${{ env.TF_DIR }}/non-prod"
+      #     tg_command: 'run-all init'
+
+      - name: Configure AWS master credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        id: master_iodc_creds
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.MASTER_IODC_ROLE_ARN }}
+          output-credentials: true
+
+      - name: Configure AWS development credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        id: development_iodc_creds
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ steps.master_iodc_creds.outputs.aws-access-key-id }}
+          aws-secret-access-key: ${{ steps.master_iodc_creds.outputs.aws-secret-access-key }}
+          aws-session-token: ${{ steps.master_iodc_creds.outputs.aws-session-token }}
+          role-to-assume: ${{ secrets.TERRAFORM_DEVELOP_ROLE_ARN }}
+          output-credentials: true
+
+      - name: Terraform init
+        id: tf_init
+        env:
+         TF_PLUGIN_CACHE_DIR: /github/workspace/.terraform.d/plugin-cache
+        run: |
+          wget -q https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.TG_VERSION }}/terragrunt_linux_amd64 >> /dev/null
+          cp -r terragrunt_linux_amd64 /usr/local/bin/terragrunt
+          chmod +x /usr/local/bin/terragrunt
+
+          cd infrastructure/non-prod/us-east-1/dev
+          ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
+          export TF_VAR_dev_account_id=${{ secrets.AWS_DEVELOPMENT_ACCOUNT_ID }}
+
+          aws configure set aws_access_key_id ${{ steps.development_iodc_creds.outputs.aws-access-key-id }} --profile dev-administrator-access
+          aws configure set aws_secret_access_key ${{ steps.development_iodc_creds.outputs.aws-secret-access-key }} --profile dev-administrator-access
+          aws configure set aws_session_token ${{ steps.development_iodc_creds.outputs.aws-session-token }} --profile dev-administrator-access
+
+          terragrunt run-all init

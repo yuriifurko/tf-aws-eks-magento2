@@ -1,0 +1,165 @@
+version: "3.1"
+
+services:
+  nginx:
+    build: ./nginx
+    container_name: magento2-nginx
+    volumes:
+      - ../src:/home/magento:cached
+    env_file:
+      - .env
+    ports:
+      - 8088:80
+    expose:
+      - 80
+    networks:
+      - magento2
+    depends_on:
+     - mysql
+     - redis
+     - php-fpm
+
+  php-fpm:
+    build: ./php-fpm
+    container_name: magento2-php-fpm
+    expose:
+      - 9000
+    volumes:
+      - ../src:/home/magento:cached
+      - ./php-fpm/php.ini:/etc/php.ini
+    networks:
+      - magento2
+    environment:
+      PHP_IDE_CONFIG: "serverName=Docker"
+      #XDEBUG_CONFIG: "client_host=host.docker.internal"
+    depends_on:
+      - mysql
+      - redis
+      - rabbitmq
+      - opensearch
+
+  redis:
+    image: arm64v8/redis:7.0
+    container_name: magento2-redis
+    expose:
+      - 6379
+    networks:
+      - magento2
+
+  mysql:
+    image: arm64v8/mysql:8.0.34
+    container_name: magento2-mysql
+    #volumes:
+    #  - ./mysql/mysqld.cnf:/etc/mysql/mysql.conf.d/mysqld.cnf
+    environment:
+      MYSQL_ROOT_PASSWORD: 'magento2'
+      MYSQL_USER: 'magento2'
+      MYSQL_PASSWORD: 'magento2'
+      MYSQL_DATABASE: 'magento2'
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'true'
+    expose:
+      - 3306
+    networks:
+      - magento2
+
+  mailhog:
+    platform: linux/x86_64
+    image: mailhog/mailhog
+    container_name: magento2-mailhog
+    environment:
+      - VIRTUAL_HOST=mail
+      - VIRTUAL_PORT=8025
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - magento2
+    expose:
+      - 1025
+      - 8025
+
+  rabbitmq:
+    image: arm64v8/rabbitmq:3.11-management
+    container_name: magento2-rabbitmq
+    environment:
+      - VIRTUAL_HOST=rabbit
+      - VIRTUAL_PORT=15672
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    restart: always
+    networks:
+      - magento2
+    expose:
+      - 15672
+      - 5672
+
+  opensearch:
+    image: opensearchproject/opensearch:2.5.0
+    container_name: magento2-opensearch
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    expose:
+      - 9200
+    restart: always
+    networks:
+      - magento2
+    environment:
+      - "discovery.type=single-node"
+      - "bootstrap.memory_lock=true"
+      - "OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m"
+      - "http.host=0.0.0.0"
+      - "DISABLE_SECURITY_PLUGIN=true"
+      - VIRTUAL_PORT=9200
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  opensearch-dashboard:
+    image: opensearchproject/opensearch-dashboards:2.5.0
+    container_name: magento2-opensearch-dashboard
+    restart: always
+    networks:
+      - magento2
+    environment:
+      - VIRTUAL_PORT=5601
+      - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true"
+      - "OPENSEARCH_HOSTS=http://opensearch:9200"
+    volumes:
+      - ./opensearch/opensearch_dashboards.yml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
+    ports:
+      - "5601:5601"
+    expose:
+      - 5601
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        hard: 65536
+
+  varnish:
+    image: arm64v8/varnish:7.3
+    container_name: magento2-varnish
+    restart: always
+    networks:
+      - magento2
+    ports:
+      - "6082:6082"
+    depends_on:
+      - nginx
+    links:
+      - nginx
+    volumes:
+      - ./varnish/varnish.vcl:/etc/varnish/default.vcl
+    environment:
+      - CACHE_SIZE=2G
+
+networks:
+  magento2:
