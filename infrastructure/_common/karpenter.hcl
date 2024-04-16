@@ -1,5 +1,5 @@
 terraform {
-  source = "git::ssh://yurii-furko@bitbucket.org/yuriyfRnD/kubernetes-helm-chart.git//modules/aws-karpenter?ref=v1.0.0"
+  source = "git::ssh://yurii-furko@bitbucket.org/yuriyfRnD/kubernetes-helm-chart.git//modules/aws-karpenter?ref=v1.0.1"
 }
 
 locals {
@@ -9,6 +9,7 @@ locals {
 
   project_name = local.environment_vars.locals.project_name
   environment  = local.environment_vars.locals.environment
+  domain_name  = local.environment_vars.locals.domain_name
   profile      = local.account_vars.locals.profile
   account_id   = local.account_vars.locals.account_id
   region       = local.region_vars.locals.region

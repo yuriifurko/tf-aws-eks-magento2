@@ -129,8 +129,6 @@ jobs:
 
       - name: Terraform init
         id: tf_init
-        env:
-         TF_PLUGIN_CACHE_DIR: /github/workspace/.terraform.d/plugin-cache
         run: |
           wget -q https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.TG_VERSION }}/terragrunt_linux_amd64 >> /dev/null
           cp -r terragrunt_linux_amd64 /usr/local/bin/terragrunt
