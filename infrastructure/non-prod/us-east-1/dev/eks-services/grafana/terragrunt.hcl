@@ -60,19 +60,17 @@ inputs = {
           enabled = true
           ingress = {
             enabled = true
+            ingressClassName = "alb"
             annotations = {
-              "kubernetes.io/ingress.class" = "alb"
-
               "alb.ingress.kubernetes.io/load-balancer-name" = format("%v-lb-controller", dependency.eks_cluster.outputs.eks_cluster_name)
               "alb.ingress.kubernetes.io/group.name"         = format("%v-lb-controller", dependency.eks_cluster.outputs.eks_cluster_name)
               "alb.ingress.kubernetes.io/target-type"        = "ip"
               "alb.ingress.kubernetes.io/scheme"             = "internet-facing"
 
 
-              "alb.ingress.kubernetes.io/healthcheck-path"     = "/api/health"
+              "alb.ingress.kubernetes.io/healthcheck-path"     = "/healthz"
               "alb.ingress.kubernetes.io/success-codes"        = "200,400"
               "alb.ingress.kubernetes.io/healthcheck-protocol" = "HTTP"
-              "alb.ingress.kubernetes.io/backend-protocol"     = "HTTP"
 
               "alb.ingress.kubernetes.io/listen-ports"     = jsonencode([{ HTTPS = 443 }])
               "alb.ingress.kubernetes.io/backend-protocol" = "HTTP"

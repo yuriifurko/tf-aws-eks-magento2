@@ -7,4 +7,6 @@
 
 # .tfvars files
 *.tfvars
+
+**/.terraform.lock.hcl
 **/.terragrunt-cache

@@ -38,19 +38,24 @@ include "eks_cluser_addons" {
 }
 
 inputs = {
+  eks_cluster_name = dependency.eks_cluster.outputs.eks_cluster_name
   eks_addons = {
-    "kube-proxy" = {
-      enabled       = true
-      addon_name    = "kube-proxy"
-      addon_version = "v1.29.1-eksbuild.2"
-    },
+
+    ## https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html
     "coredns" = {
       enabled       = true
       addon_name    = "coredns"
-      addon_version = "v1.11.1-eksbuild.6"
+      addon_version = "v1.9.3-eksbuild.11"
     },
+    ## https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
+    "kube-proxy" = {
+      enabled       = true
+      addon_name    = "kube-proxy"
+      addon_version = "v1.26.13-eksbuild.2"
+    },
+    ## https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
     "vpc-cni" = {
-      enabled       = false
+      enabled       = true
       addon_name    = "vpc-cni"
       addon_version = "v1.18.0-eksbuild.1"
       role_arn      = dependency.vpc_cni.outputs.iam_role_arn

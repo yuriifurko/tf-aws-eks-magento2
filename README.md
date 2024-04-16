@@ -1,8 +1,6 @@
 Magento 2 for Development (For Apple Silicon)
 ===
 
-![Magento 2](https://cdn.rawgit.com/rafaelstz/magento2-snippets-visualstudio/master/images/icon.png)
-
 ## 🏠 Architecture
 
 ![img](images/arch.drawio.png)
@@ -11,11 +9,10 @@ Magento 2 for Development (For Apple Silicon)
 
 ```bash
 export TF_VAR_dev_account_id=000000000000
-cd infrastructure/non-prod/us-east-1/dev
 
-terragrunt run-all init --upgrade
-terragrunt run-all plan
-terragrunt run-all apply -auto-approve
+terragrunt run-all init --upgrade --terragrunt-working-dir infrastructure/non-prod/us-east-1/dev
+terragrunt run-all plan --terragrunt-working-dir infrastructure/non-prod/us-east-1/dev
+terragrunt run-all apply -auto-approve --terragrunt-working-dir infrastructure/non-prod/us-east-1/dev
 ```
 
 ### 🖥️ Destroy
@@ -61,11 +58,21 @@ http://rabbit.magento2.localhost.loc - **RabbitMQ** (guest/guest for access)<br>
     `Workround` - Runt each module separate (Network/EKS/Helm Charts)
 
     ```bash
-    terragrunt apply --terragrunt-working-dir us-east-1/dev/data-sources -auto-approve
-    terragrunt apply --terragrunt-working-dir us-east-1/dev/vpc-network -auto-approve
-    terragrunt apply --terragrunt-working-dir us-east-1/dev/eks-cluster-irsa/vpc-cni -auto-approve
-    terragrunt apply --terragrunt-working-dir us-east-1/dev/eks-cluster -auto-approve
+    terragrunt apply --terragrunt-working-dir infrastructure/non-prod/us-east-1/dev/data-sources -auto-approve
+    terragrunt apply --terragrunt-working-dir infrastructure/non-prod/us-east-1/dev/vpc-network -auto-approve
+    terragrunt apply --terragrunt-working-dir infrastructure/non-prod/us-east-1/dev/eks-cluster -auto-approve
+
+    terragrunt apply --terragrunt-working-dir infrastructure/non-prod/us-east-1/dev/eks-cluster-irsa/vpc-cni -auto-approve
+    terragrunt apply --terragrunt-working-dir infrastructure/non-prod/us-east-1/dev/eks-cluster-addons -auto-approve
     ```
+
+* `Error: reading EKS Cluster: couldn't find monitoring resource`
+
+    ```bash
+    terragrunt apply --terragrunt-working-dir infrastructure/non-prod/us-east-1/dev/eks-services/grafana -auto-approve
+    ```
+
+* `Error: │ no matches for kind "Provisioner" in group "karpenter.sh"`
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements

@@ -79,12 +79,10 @@ inputs = {
               #"alb.ingress.kubernetes.io/backend-protocol-version" = "HTTP2"
             }
 
-            hosts = [
-              format("%v", "argocd.${include.root.locals.environment}.${include.root.locals.domain_name}")
-            ]
+            hostname = format("%v", "argocd.${include.root.locals.environment}.${include.root.locals.domain_name}")
             pathType = "Prefix"
             paths    = ["/"]
-            tls      = []
+            tls      = false
           }
         }
       })

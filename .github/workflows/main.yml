@@ -61,11 +61,6 @@ jobs:
           role-to-assume: ${{ secrets.TERRAFORM_DEVELOP_ROLE_ARN }}
           output-credentials: true
 
-    outputs:
-      AWS_ACCESS_KEY_ID: ${{ steps.development_iodc_creds.outputs.aws-access-key-id }}
-      AWS_SECRET_ACCESS_KEY: ${{ steps.development_iodc_creds.outputs.aws-secret-access-key }}
-      AWS_SESSION_TOKEN: ${{ steps.development_iodc_creds.outputs.aws-session-token }}
-
   init:
     runs-on: ubuntu-latest
     permissions:
@@ -134,7 +129,6 @@ jobs:
           cp -r terragrunt_linux_amd64 /usr/local/bin/terragrunt
           chmod +x /usr/local/bin/terragrunt
 
-          cd infrastructure/non-prod/us-east-1/dev
           ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
           export TF_VAR_dev_account_id=${{ secrets.AWS_DEVELOPMENT_ACCOUNT_ID }}
 
@@ -142,4 +136,4 @@ jobs:
           aws configure set aws_secret_access_key ${{ steps.development_iodc_creds.outputs.aws-secret-access-key }} --profile dev-administrator-access
           aws configure set aws_session_token ${{ steps.development_iodc_creds.outputs.aws-session-token }} --profile dev-administrator-access
 
-          terragrunt run-all init
+          terragrunt run-all init --upgrade --terragrunt-working-dir infrastructure/non-prod/us-east-1/dev

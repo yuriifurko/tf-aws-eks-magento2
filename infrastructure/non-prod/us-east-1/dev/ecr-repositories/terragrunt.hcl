@@ -10,7 +10,12 @@ include "aws_ecr_repositories" {
 
 inputs = {
   repositories = {
-    "spring-boot" = {
+    "nginx" = {
+      image_tag_mutability  = "IMMUTABLE"
+      scan_on_push          = true
+      expiration_after_days = 7
+    },
+    "php-fpm" = {
       image_tag_mutability  = "IMMUTABLE"
       scan_on_push          = true
       expiration_after_days = 7
@@ -35,7 +40,8 @@ inputs = {
     ]
   })
 
-  manage_registry_scanning_configuration = true
+  # This policy manage by Organization
+  manage_registry_scanning_configuration = false
 
   registry_scan_type = "BASIC"
 

@@ -1,5 +1,5 @@
 terraform {
-  source = "git::ssh://yurii-furko@bitbucket.org/yuriyfRnD/kubernetes-helm-chart.git//modules/monitoring/kube-prometheus-stack?ref=v1.0.1"
+  source = "git::ssh://yurii-furko@bitbucket.org/yuriyfRnD/kubernetes-helm-chart.git//modules/monitoring/kube-prometheus-stack?ref=v1.0.2"
 }
 
 locals {

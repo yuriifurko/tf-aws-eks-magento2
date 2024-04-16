@@ -55,13 +55,13 @@ inputs = {
       subnet_ids = dependency.vpc_network.outputs.vpc_private_subnets_id
 
       ami_type       = "AL2_x86_64"
-      instance_types = ["t3a.small"]
+      instance_types = ["t3a.medium"]
       disk_type      = "gp3"
       disk_size      = 20
 
-      min_size     = 1
-      desired_size = 1
-      max_size     = 1
+      min_size     = 2
+      desired_size = 2
+      max_size     = 2
     },
     "backend" = {
       enabled    = false
